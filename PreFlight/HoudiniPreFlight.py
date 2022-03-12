@@ -11,6 +11,11 @@
 #   - Added AOV list check
 #   - Added DOF check
 #   - added method to find rops instead of copying and pasting code
+# v004 11/03/2022 (Raj Sandhu)
+#   - Added Motion Check
+#   - Added Crypto Chcck
+#   - Added Gi check
+
 
 
 import hou
@@ -40,6 +45,15 @@ def getRopList():
 def setRopList():
     global rop_list
     rop_list = hou.ropNodeTypeCategory().nodeType("Redshift_ROP").instances()
+
+
+def getAOVList(rop):
+    aov_list_length = rop.parm('RS_aov').eval()
+    aovs = []
+    for i in range(aov_list_length):
+        aov = rop.parm('RS_aovSuffix_{i}'.format(i=i + 1)).eval()
+        aovs.append(aov)
+    return aovs
 
 
 # Check Rop Cameras
@@ -131,7 +145,7 @@ def frameRange():
     return frames, warning
 
 
-def aovList():
+def aovs():
     rops = getRopList()
     warnings = []
     for rop in rops:
@@ -154,6 +168,79 @@ def zDepth():
             messages.append(message)
         else:
             continue
+    return messages
+
+
+def motionVector(rop):
+    aov_list_length = rop.parm('RS_aov').eval()
+    check = 0
+    for i in range(aov_list_length):
+        aov = rop.parm('RS_aovID_{i}'.format(i=i + 1)).eval()
+        if aov == 2:
+            check = 1
+            break
+        else:
+            check = 0
+    return check
+
+
+def motionBlur(rop):
+    moblur = rop.parm('MotionBlurEnabled').eval()
+    if moblur == 1:
+        check = 1
+    else:
+        check = 0
+    return check
+
+
+def motionCheck():
+    rops = getRopList()
+    messages = []
+    for rop in rops:
+        mo_Vector = motionVector(rop)
+        mo_blur = motionBlur(rop)
+        if mo_Vector >= 1 and mo_blur >= 1:
+            message = "Motion Blur and Vector enabled"
+        elif mo_blur >= 1:
+            message = "Motion Blur Enabled"
+        elif mo_Vector >= 1:
+            message = "Motion Vector Enabled"
+        messages.append("{rop} {m}".format(rop=rop, m=message))
+    return messages
+
+
+def gi():
+    rops = getRopList()
+    messages = []
+    for rop in rops:
+        rs_gi = rop.parm('RS_GIEnabled').eval()
+        if rs_gi >= 1:
+            message = str(rop) + " GI Enabled"
+        if rs_gi < 1:
+            message = str(rop) + ' GI Disabled'
+        messages.append(message)
+    return messages
+
+
+def crypto():
+    rops = getRopList()
+    messages = []
+
+    for rop in rops:
+        aovlist = getAOVList(rop)
+        if 'U_CRYMAT_matte' not in aovlist and 'U_CRYOBJ_matte' not in aovlist:
+            message = 'Crypto Missing'
+            messages.append('{rop} {m}'.format(rop=rop, m=message))
+
+        elif 'U_CRYMAT_matte' not in aovlist:
+            message = 'Crypto Matte Missing'
+            messages.append('{rop} {m}'.format(rop=rop, m=message))
+
+        elif 'U_CRYOBJ_matte' not in aovlist:
+            message = 'Crypto OBJ Missing'
+            messages.append('{rop} {m}'.format(rop=rop, m=message))
+
+
     return messages
 
 
@@ -260,7 +347,7 @@ class HoudiniPreFlightUI(QtWidgets.QWidget):
         mainUi.addWidget(label_AovHeader)
         mainUi.addLayout(layout_Aov)
 
-        aov_list = aovList()
+        aov_list = aovs()
         if len(aov_list) > 0:
             label_Aovtitle = QtWidgets.QLabel('AOV Status:')
             layout_Aov.addWidget(label_Aovtitle, 0, 0, 1, 1)
@@ -275,13 +362,49 @@ class HoudiniPreFlightUI(QtWidgets.QWidget):
         z_depth = zDepth()
         if len(z_depth) > 0:
             label_zdepth_title = QtWidgets.QLabel('Z-Depth Status:')
-            layout_Aov.addWidget(label_zdepth_title, y+1, 0, 1, 1)
+            layout_Aov.addWidget(label_zdepth_title, y + 1, 0, 1, 1)
             for z in z_depth:
                 y = y + 1
                 label_zdepth_value = QtWidgets.QLabel(z)
                 label_zdepth_value.setStyleSheet("color: yellow")
                 label_zdepth_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
                 layout_Aov.addWidget(label_zdepth_value, y, 1, 1, 2)
+
+        motion = motionCheck()
+        if len(motion) > 0:
+            label_motion_title = QtWidgets.QLabel('Motion:')
+            layout_Aov.addWidget(label_motion_title, y + 2, 0, 1, 1)
+            for m in motion:
+                y = y + 1
+                label_motion_value = QtWidgets.QLabel(m)
+                if "Motion Blur and Vector enabled" in m:
+                    label_motion_value.setStyleSheet("color: red")
+                    label_motion_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+                    layout_Aov.addWidget(label_motion_value, y + 1, 1, 1, 2)
+                else:
+                    label_motion_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+                    layout_Aov.addWidget(label_motion_value, y + 1, 1, 1, 2)
+
+        gi_rs = gi()
+        if len(gi_rs) > 0:
+            label_gi_title = QtWidgets.QLabel('GI Status:')
+            layout_Aov.addWidget(label_gi_title, y + 3, 0, 1, 1)
+            for g in gi_rs:
+                y = y + 1
+                label_gi_value = QtWidgets.QLabel(g)
+                label_gi_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+                layout_Aov.addWidget(label_gi_value, y + 2, 1, 1, 2)
+
+        cryptomatte = crypto()
+        if len(cryptomatte) > 0:
+            label_crypto_title = QtWidgets.QLabel('Crypto Status:')
+            layout_Aov.addWidget(label_crypto_title, y + 4, 0, 1, 1)
+            for c in cryptomatte:
+                y = y + 1
+                label_crypto_value = QtWidgets.QLabel(c)
+                label_crypto_value.setStyleSheet("color: red")
+                label_crypto_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+                layout_Aov.addWidget(label_crypto_value, y + 3, 1, 1, 2)
 
         mainUi.addWidget(Ui_spacer)
         # button = QtWidgets.QPushButton('Change Font', self)

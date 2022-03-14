@@ -15,7 +15,10 @@
 #   - Added Motion Check
 #   - Added Crypto Chcck
 #   - Added Gi check
-
+# v005 11/03/2022 (Raj Sandhu)
+#   - Added Dome check
+#   - Added Rs Env check
+#   - Added Save check
 
 
 import hou
@@ -24,6 +27,8 @@ from PySide2 import QtCore, QtGui, QtWidgets
 # Global Variables
 default_cam = ''
 rop_list = []
+rsLights = []
+rsdomes = []
 
 
 def getDefaultCam():
@@ -34,6 +39,21 @@ def getDefaultCam():
 def setDefaultCam(cam):
     global default_cam
     default_cam = cam
+
+
+def getRsLight():
+    global rsLights, rsdomes
+    domes = rsdomes
+    lights = rsLights
+    return lights, domes
+
+
+def setRsLight():
+    global rsLights, rsdomes
+    lights = hou.objNodeTypeCategory().nodeType('rslight').instances()
+    domes = hou.objNodeTypeCategory().nodeType('rslightdome::2.0').instances()
+    rsLights = lights
+    rsdomes = domes
 
 
 def getRopList():
@@ -240,6 +260,54 @@ def crypto():
             message = 'Crypto OBJ Missing'
             messages.append('{rop} {m}'.format(rop=rop, m=message))
 
+    return messages
+
+
+def checklights():
+    lights, domes = getRsLight()
+    messages = []
+    for dome in domes:
+        domeblackdrop = dome.parm('background_enable').eval()
+        domebackplate = dome.parm('backPlateEnabled').eval()
+        if domeblackdrop >= 1:
+            message = '{d} background is ON'.format(d=dome.name())
+            messages.append(message)
+        if domeblackdrop <= 0:
+            message = '{d} background is OFF'.format(d=dome.name())
+            messages.append(message)
+        if domebackplate >= 1:
+            message = '{d} backplate is ON'.format(d=dome.name())
+            messages.append(message)
+        if domebackplate <= 0:
+            message = '{d} backplate is OFF'.format(d=dome.name())
+            messages.append(message)
+
+    return messages
+
+def rsEnv():
+    rops = getRopList()
+    messages = []
+    for rop in rops:
+        rs_env = rop.parm('RS_globalEnvironment').eval()
+
+        if rs_env != '':
+            message = '{rop} has RS ENV Enabled'.format(rop=rop)
+            messages.append(message)
+        else:
+            continue
+    return messages
+
+
+
+def saveStatus():
+    hip_name = hou.hipFile.basename()
+    save_check = hou.hipFile.hasUnsavedChanges()
+    if save_check:
+        message = 'File not saved'
+    else:
+        message = 'File saved'
+
+    messages = [hip_name, message]
 
     return messages
 
@@ -406,6 +474,41 @@ class HoudiniPreFlightUI(QtWidgets.QWidget):
                 label_crypto_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
                 layout_Aov.addWidget(label_crypto_value, y + 3, 1, 1, 2)
 
+        domelists = checklights()
+        if len(domelists) > 0:
+            label_dome_title = QtWidgets.QLabel('Domelight Status:')
+            layout_Aov.addWidget(label_dome_title, y + 5, 0, 1, 1)
+            for c in domelists:
+                y = y + 1
+                label_dome_value = QtWidgets.QLabel(c)
+                label_dome_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+                layout_Aov.addWidget(label_dome_value, y + 4, 1, 1, 2)
+
+        hipinfo = saveStatus()
+        if len(hipinfo) > 0:
+            label_hip_title = QtWidgets.QLabel('HIP Status:')
+            layout_Aov.addWidget(label_hip_title, y + 6, 0, 1, 1)
+            for h in hipinfo:
+                y = y + 1
+                label_hip_value = QtWidgets.QLabel(h)
+                if "File not saved" in h:
+                    label_hip_value.setStyleSheet("color: red")
+                    label_hip_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+                    layout_Aov.addWidget(label_hip_value, y + 5, 1, 1, 2)
+                else:
+                    label_hip_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+                    layout_Aov.addWidget(label_hip_value, y + 5, 1, 1, 2)
+
+        rsenv = rsEnv()
+        if len(rsenv) > 0:
+            label_env_title = QtWidgets.QLabel('RS ENV Status:')
+            layout_Aov.addWidget(label_env_title, y + 7, 0, 1, 1)
+            for r in rsenv:
+                y = y + 1
+                label_env_value = QtWidgets.QLabel(r)
+                label_env_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+                layout_Aov.addWidget(label_env_value, y + 6, 1, 1, 2)
+
         mainUi.addWidget(Ui_spacer)
         # button = QtWidgets.QPushButton('Change Font', self)
         # button.setFocusPolicy(QtCore.Qt.NoFocus)
@@ -423,5 +526,6 @@ class HoudiniPreFlightUI(QtWidgets.QWidget):
 
 
 setRopList()
+setRsLight()
 window = HoudiniPreFlightUI()
 window.show()

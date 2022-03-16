@@ -607,8 +607,10 @@ class HoudiniPreFlightUI(QtWidgets.QWidget):
 
         self.setLayout(layout_window)
 
-
-setRopList()
-setRsLight()
-window = HoudiniPreFlightUI()
-window.show()
+try:
+    setRopList()
+    setRsLight()
+    window = HoudiniPreFlightUI()
+    window.show()
+except:
+    hou.ui.displayMessage("Error: No Rops Found")

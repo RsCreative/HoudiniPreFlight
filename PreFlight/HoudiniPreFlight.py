@@ -574,7 +574,7 @@ class HoudiniPreFlightUI(QtWidgets.QWidget):
         # Motion Check
         motion = motionCheck()
         if len(motion) > 0:
-            text_motion_title = QtWidgets.QLabel('Z-Depth Status:', self)
+            text_motion_title = QtWidgets.QLabel('Motion Status:', self)
             text_motion_title.setAlignment(QtCore.Qt.AlignTop)
             text_motion_title.setFont(font_header)
             layout_col_3_main.addWidget(text_motion_title)

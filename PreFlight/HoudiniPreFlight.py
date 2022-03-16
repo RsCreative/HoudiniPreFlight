@@ -15,11 +15,12 @@
 #   - Added Motion Check
 #   - Added Crypto Chcck
 #   - Added Gi check
-# v005 11/03/2022 (Raj Sandhu)
+# v005 15/03/2022 (Raj Sandhu)
 #   - Added Dome check
 #   - Added Rs Env check
 #   - Added Save check
-
+# v006 16/03/2022 (Raj Sandhu)
+#     - New UI
 
 import hou
 from PySide2 import QtCore, QtGui, QtWidgets
@@ -110,9 +111,9 @@ def cameraInfo():
         rop_cam = rop.parm("RS_renderCamera").eval()
         print("[CameraInfo]{rop} Camera set to {rop_cam}".format(rop=rop, rop_cam=rop_cam))
         if rop_cam != default_cam:
-            error.append("Error: {rop} is set to {cam}".format(rop=rop, cam=rop_cam))
+            error.append("{rop} is set to {cam}".format(rop=rop, cam=rop_cam))
 
-    message = 'Render Cam set to {default_cam}'.format(output=output, default_cam=default_cam)
+    message = '{default_cam}'.format(output=output, default_cam=default_cam)
 
     info = []
 
@@ -160,7 +161,7 @@ def frameRange():
         rop_lFrame = rop.parm("f2").eval()
         if rop_fFrame != f_frame or rop_lFrame != l_frame:
             warning.append(
-                "Warning: {rop} set to {fFrame} - {lFrame}".format(rop=rop, fFrame=rop_fFrame, lFrame=rop_lFrame))
+                "{rop} set to {fFrame} - {lFrame}".format(rop=rop, fFrame=rop_fFrame, lFrame=rop_lFrame))
 
     return frames, warning
 
@@ -171,7 +172,7 @@ def aovs():
     for rop in rops:
         aovListLength = rop.parm('RS_aov').eval()
         if aovListLength <= 0:
-            warnings.append('Error: {rop} missing AOVs'.format(rop=rop))
+            warnings.append('{rop} missing AOVs'.format(rop=rop))
         else:
             continue
     return warnings
@@ -184,7 +185,7 @@ def zDepth():
         z_depth = rop.parm("RS_aovDeepEnabled").eval()
         print("[ROP INFO]ROP ZDepth {z_depth}".format(z_depth=z_depth))
         if z_depth <= 0:
-            message = 'Warning: {rop} Z-Depth Disabled'.format(rop=rop)
+            message = '{rop} Z-Depth Disabled'.format(rop=rop)
             messages.append(message)
         else:
             continue
@@ -284,6 +285,7 @@ def checklights():
 
     return messages
 
+
 def rsEnv():
     rops = getRopList()
     messages = []
@@ -298,14 +300,13 @@ def rsEnv():
     return messages
 
 
-
 def saveStatus():
     hip_name = hou.hipFile.basename()
     save_check = hou.hipFile.hasUnsavedChanges()
     if save_check:
-        message = 'File not saved'
+        message = 'File Not Saved'
     else:
-        message = 'File saved'
+        message = 'File Saved'
 
     messages = [hip_name, message]
 
@@ -316,213 +317,295 @@ class HoudiniPreFlightUI(QtWidgets.QWidget):
     # Create Window
     def __init__(self, parent=None):
         QtWidgets.QWidget.__init__(self, parent)
-        self.setGeometry(500, 300, 250, 210)
+        self.setGeometry(500, 300, 600, 550)
         self.setWindowTitle('Houdini PreFlight')
 
-        headerfont = QtGui.QFont("Arial", 10, QtGui.QFont.Bold)
+        font_title = QtGui.QFont("Arial", 12, QtGui.QFont.Bold)
+        font_header = QtGui.QFont("Arial", 10, QtGui.QFont.Bold)
+        font_body = QtGui.QFont("Arial", 10)
+        font_error = QtGui.QFont("Arial", 10, QtGui.QFont.Bold)
 
-        mainUi = QtWidgets.QVBoxLayout()
-        layout_rop_section = QtWidgets.QHBoxLayout()
-        layout_rop_camlist = QtWidgets.QVBoxLayout()
-        layout_rendercam = QtWidgets.QGridLayout()
-        layout_Aov = QtWidgets.QGridLayout()
-
-        label_title = QtWidgets.QLabel('Houdini PreFlight', self)
-        label_title.setFont(headerfont)
-        # label_title.setStyleSheet("color: black")
-        mainUi.addWidget(label_title)
-
+        layout_window = QtWidgets.QVBoxLayout()
+        layout_window.setAlignment(QtCore.Qt.AlignTop)
         Ui_spacer = QtWidgets.QLabel('', self)
-        mainUi.addWidget(Ui_spacer)
 
-        # ROP Camera Section
-        label_camera_info = QtWidgets.QLabel('ROP Camera Info', self)
-        label_camera_info.setFont(headerfont)
-        mainUi.addWidget(label_camera_info)
+        # Window Title
+        text_title = QtWidgets.QLabel('Houdini PreFlight', self)
+        text_title.setFont(font_title)
+        layout_window.addWidget(text_title)
+        layout_window.addWidget(Ui_spacer)
 
-        mainUi.addLayout(layout_rop_section)
-        label_rop_caminfo = QtWidgets.QLabel('ROP Cameras:', self)
-        label_rop_caminfo.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
-        layout_rop_section.addWidget(label_rop_caminfo)
-        layout_rop_section.addLayout(layout_rop_camlist)
-        def_cam, errors = cameraInfo()
-        label_rop_defaultCam = QtWidgets.QLabel(def_cam, self)
-        layout_rop_camlist.addWidget(label_rop_defaultCam)
-        for message in errors:
-            cam_listItem = QtWidgets.QLabel(message, self)
-            cam_listItem.setStyleSheet("color: red")
-            layout_rop_camlist.addWidget(cam_listItem)
+        # HIP Info
+        layout_hip_main = QtWidgets.QHBoxLayout()
+        layout_hip_main.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+        layout_window.addLayout(layout_hip_main)
 
-        mainUi.addWidget(Ui_spacer)
+        text_hip_title = QtWidgets.QLabel('HIP File Status:', self)
+        text_hip_title.setAlignment(QtCore.Qt.AlignTop)
+        text_hip_title.setFont(font_header)
+        layout_hip_main.addWidget(text_hip_title)
 
-        # Render Camera Section
-        label_defaultcam = QtWidgets.QLabel('Render Camera Settings', self)
-        label_defaultcam.setFont(headerfont)
-        mainUi.addWidget(label_defaultcam)
-        mainUi.addLayout(layout_rendercam)
+        layout_hip_list = QtWidgets.QVBoxLayout()
+        layout_hip_main.addLayout(layout_hip_list)
 
-        # Resolution
-        label_resolution = QtWidgets.QLabel('Resolution:', self)
-        layout_rendercam.addWidget(label_resolution, 0, 0, 1, 1)
+        hip_info = saveStatus()
+        if len(hip_info) > 0:
+            for hip in hip_info:
+                text_hip_list = QtWidgets.QLabel(hip)
+                text_hip_list.setAlignment(QtCore.Qt.AlignTop)
+                if "File Not Saved" in hip:
+                    text_hip_list.setFont(font_error)
+                    text_hip_list.setStyleSheet("color: red")
+                else:
+                    text_hip_list.setFont(font_body)
+                layout_hip_list.addWidget(text_hip_list)
+
+        layout_window.addWidget(Ui_spacer)
+        # Main Layout
+        layout_main = QtWidgets.QHBoxLayout()
+        layout_window.addLayout(layout_main)
+
+        # Column 1
+        layout_col_1_main = QtWidgets.QVBoxLayout()
+        layout_main.addLayout(layout_col_1_main)
+        text_camera_title = QtWidgets.QLabel('Camera Settings', self)
+        text_camera_title.setAlignment(QtCore.Qt.AlignTop)
+        text_camera_title.setFont(font_title)
+        layout_col_1_main.addWidget(text_camera_title)
+
+        # Render Camera
+        defaultCam, camErrors = cameraInfo()
+        text_render_cam_title = QtWidgets.QLabel('Render Camera:', self)
+        text_render_cam_title.setAlignment(QtCore.Qt.AlignTop)
+        text_render_cam_title.setFont(font_header)
+        layout_col_1_main.addWidget(text_render_cam_title)
+
+        text_render_cam_list = QtWidgets.QLabel('      ' + defaultCam, self)
+        text_render_cam_list.setAlignment(QtCore.Qt.AlignTop)
+        text_render_cam_list.setFont(font_body)
+        layout_col_1_main.addWidget(text_render_cam_list)
+
+        # Render Mismatch
+
+        if len(camErrors) > 0:
+            for errors in camErrors:
+                text_r_cam_list = QtWidgets.QLabel('      ' + errors)
+                text_r_cam_list.setAlignment(QtCore.Qt.AlignTop)
+                text_r_cam_list.setStyleSheet("color: red")
+                text_r_cam_list.setFont(font_error)
+                layout_col_1_main.addWidget(text_r_cam_list)
+        layout_col_1_main.addWidget(Ui_spacer)
+
+        # Camera Resolution
+        text_resolution_title = QtWidgets.QLabel('Camera Resolution:', self)
+        text_resolution_title.setAlignment(QtCore.Qt.AlignTop)
+        text_resolution_title.setFont(font_header)
+        layout_col_1_main.addWidget(text_resolution_title)
+
         x, y = resolution()
-        label_res_values = QtWidgets.QLabel('{x} x {y}'.format(x=x, y=y))
-        label_res_values.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-        layout_rendercam.addWidget(label_res_values, 0, 1, 1, 1)
+        text_resolution_list = QtWidgets.QLabel('      {x} x {y}'.format(x=x, y=y), self)
+        text_resolution_list.setAlignment(QtCore.Qt.AlignTop)
+        text_resolution_list.setFont(font_body)
+        layout_col_1_main.addWidget(text_resolution_list)
+        layout_col_1_main.addWidget(Ui_spacer)
 
         # Pixel Ratio
-        label_pixelRatio = QtWidgets.QLabel('Pixel Aspect Ratio:', self)
-        layout_rendercam.addWidget(label_pixelRatio, 1, 0, 1, 1)
+
+        text_pixel_title = QtWidgets.QLabel('Pixel Aspect Ratio:', self)
+        text_pixel_title.setAlignment(QtCore.Qt.AlignTop)
+        text_pixel_title.setFont(font_header)
+        layout_col_1_main.addWidget(text_pixel_title)
+
         pixel = pixelRatio()
-        label_pxValues = QtWidgets.QLabel('{pixel}'.format(pixel=pixel))
-        label_pxValues.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-        layout_rendercam.addWidget(label_pxValues, 1, 1, 1, 1)
+        text_pixel_list = QtWidgets.QLabel('      {pixel}'.format(pixel=pixel), self)
+        text_pixel_list.setAlignment(QtCore.Qt.AlignTop)
+        if float(pixel) > 2:
+            text_pixel_list.setStyleSheet('color : red')
+            text_pixel_list.setFont(font_error)
+        else:
+            text_pixel_list.setFont(font_body)
+        layout_col_1_main.addWidget(text_pixel_list)
+        layout_col_1_main.addWidget(Ui_spacer)
 
         # Depth of Field
-        label_doftitle = QtWidgets.QLabel('Camera DOF:', self)
-        layout_rendercam.addWidget(label_doftitle, 2, 0, 1, 1)
-        camdof, dof_status = dof()
-        if dof_status <= 0:
-            label_dofValues = QtWidgets.QLabel('{camdof}'.format(camdof=camdof))
-            label_dofValues.setStyleSheet("color: yellow")
-        else:
-            label_dofValues = QtWidgets.QLabel('{camdof}'.format(camdof=camdof))
+        text_dof_title = QtWidgets.QLabel('Camera DOF:', self)
+        text_dof_title.setAlignment(QtCore.Qt.AlignTop)
+        text_dof_title.setFont(font_header)
+        layout_col_1_main.addWidget(text_dof_title)
 
-        label_dofValues.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-        layout_rendercam.addWidget(label_dofValues, 2, 1, 1, 1)
+        cam_dof, dof_status = dof()
+        text_dof_list = QtWidgets.QLabel('      {camdof}'.format(camdof=cam_dof), self)
+
+        if dof_status <= 0:
+            text_dof_list.setStyleSheet("color: yellow")
+
+        text_dof_list.setAlignment(QtCore.Qt.AlignTop)
+        text_dof_list.setFont(font_body)
+        layout_col_1_main.addWidget(text_dof_list)
+
+        layout_col_1_main.addWidget(Ui_spacer)
 
         # Frame Range
-        label_frameheader = QtWidgets.QLabel('Frame Range:', self)
-        layout_rendercam.addWidget(label_frameheader, 3, 0, 1, 1)
+        text_frames_title = QtWidgets.QLabel('Frame Range:', self)
+        text_frames_title.setAlignment(QtCore.Qt.AlignTop)
+        text_frames_title.setFont(font_header)
+        layout_col_1_main.addWidget(text_frames_title)
 
-        frames, FrameMismatch = frameRange()
+        frames, frame_mismatch = frameRange()
 
-        label_framerange = QtWidgets.QLabel(frames, self)
-        label_framerange.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-        layout_rendercam.addWidget(label_framerange, 3, 1, 1, 1)
-        x = 3
-        for warning in FrameMismatch:
-            x = x + 1
-            label_framewarning = QtWidgets.QLabel(warning, self)
-            label_framewarning.setStyleSheet("color: yellow")
-            label_framewarning.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-            layout_rendercam.addWidget(label_framewarning, x, 1, 1, 1)
+        text_prj_frames = QtWidgets.QLabel('     ' + frames, self)
+        text_prj_frames.setAlignment(QtCore.Qt.AlignTop)
+        text_prj_frames.setFont(font_body)
+        layout_col_1_main.addWidget(text_prj_frames)
 
-        mainUi.addWidget(Ui_spacer)
+        # Frame Range Mismatch
+        if len(frame_mismatch) > 0:
+            for errors in frame_mismatch:
+                text_frame_list = QtWidgets.QLabel('     ' + errors, self)
+                text_frame_list.setAlignment(QtCore.Qt.AlignTop)
+                text_frame_list.setFont(font_body)
+                text_frame_list.setStyleSheet("color: yellow")
+                layout_col_1_main.addWidget(text_frame_list)
 
-        # AOV Section
-        label_AovHeader = QtWidgets.QLabel('AOV Settings', self)
-        label_AovHeader.setFont(headerfont)
-        mainUi.addWidget(label_AovHeader)
-        mainUi.addLayout(layout_Aov)
+        layout_col_1_main.addWidget(Ui_spacer)
 
+        # Lights
+        text_lights_title = QtWidgets.QLabel('Light Settings', self)
+        text_lights_title.setAlignment(QtCore.Qt.AlignTop)
+        text_lights_title.setFont(font_title)
+        layout_col_1_main.addWidget(text_lights_title)
+
+        # Dome Lights
+        domelist = checklights()
+        if len(domelist) > 0:
+            text_dome_light_title = QtWidgets.QLabel('Dome Status:', self)
+            text_dome_light_title.setAlignment(QtCore.Qt.AlignTop)
+            text_dome_light_title.setFont(font_header)
+            layout_col_1_main.addWidget(text_dome_light_title)
+
+            for dome in domelist:
+                text_dome_light_list = QtWidgets.QLabel('     ' + dome)
+                text_dome_light_list.setAlignment(QtCore.Qt.AlignTop)
+                text_dome_light_list.setFont(font_body)
+                layout_col_1_main.addWidget(text_dome_light_list)
+
+        # Column 2
+        layout_col_2_main = QtWidgets.QVBoxLayout()
+        layout_main.addLayout(layout_col_2_main)
+        layout_col_2_main.addWidget(Ui_spacer)
+
+        # Column 3
+        layout_col_3_main = QtWidgets.QVBoxLayout()
+        layout_main.addLayout(layout_col_3_main)
+
+        # Aov Settings
+        text_aov_header = QtWidgets.QLabel('AOV Settings', self)
+        text_aov_header.setAlignment(QtCore.Qt.AlignTop)
+        text_aov_header.setFont(font_title)
+        layout_col_3_main.addWidget(text_aov_header)
+
+        # AOV List
         aov_list = aovs()
         if len(aov_list) > 0:
-            label_Aovtitle = QtWidgets.QLabel('AOV Status:')
-            layout_Aov.addWidget(label_Aovtitle, 0, 0, 1, 1)
-            y = -1
+            text_aov_title = QtWidgets.QLabel('AOV ROP Status:', self)
+            text_aov_title.setAlignment(QtCore.Qt.AlignTop)
+            text_aov_title.setFont(font_header)
+            layout_col_3_main.addWidget(text_aov_title)
+
             for aov in aov_list:
-                y = y + 1
-                label_Aovtitle = QtWidgets.QLabel(aov)
-                label_Aovtitle.setStyleSheet("color: red")
-                label_Aovtitle.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-                layout_Aov.addWidget(label_Aovtitle, y, 1, 1, 2)
+                text_aov_list = QtWidgets.QLabel('     ' + aov)
+                text_aov_list.setAlignment(QtCore.Qt.AlignTop)
+                text_aov_list.setStyleSheet("color: red")
+                text_aov_list.setFont(font_error)
+                layout_col_3_main.addWidget(text_aov_list)
+            layout_col_3_main.addWidget(Ui_spacer)
 
-        z_depth = zDepth()
-        if len(z_depth) > 0:
-            label_zdepth_title = QtWidgets.QLabel('Z-Depth Status:')
-            layout_Aov.addWidget(label_zdepth_title, y + 1, 0, 1, 1)
-            for z in z_depth:
-                y = y + 1
-                label_zdepth_value = QtWidgets.QLabel(z)
-                label_zdepth_value.setStyleSheet("color: yellow")
-                label_zdepth_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-                layout_Aov.addWidget(label_zdepth_value, y, 1, 1, 2)
+        # Crypto Check
+        cryptomattes = crypto()
+        if len(cryptomattes) > 0:
+            text_crypto_title = QtWidgets.QLabel('Crypto AOV Status:', self)
+            text_crypto_title.setAlignment(QtCore.Qt.AlignTop)
+            text_crypto_title.setFont(font_header)
+            layout_col_3_main.addWidget(text_crypto_title)
 
-        motion = motionCheck()
-        if len(motion) > 0:
-            label_motion_title = QtWidgets.QLabel('Motion:')
-            layout_Aov.addWidget(label_motion_title, y + 2, 0, 1, 1)
-            for m in motion:
-                y = y + 1
-                label_motion_value = QtWidgets.QLabel(m)
-                if "Motion Blur and Vector enabled" in m:
-                    label_motion_value.setStyleSheet("color: red")
-                    label_motion_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-                    layout_Aov.addWidget(label_motion_value, y + 1, 1, 1, 2)
-                else:
-                    label_motion_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-                    layout_Aov.addWidget(label_motion_value, y + 1, 1, 1, 2)
+            for mattes in cryptomattes:
+                text_crypto_list = QtWidgets.QLabel('     ' + mattes)
+                text_crypto_list.setAlignment(QtCore.Qt.AlignTop)
+                text_crypto_list.setFont(font_error)
+                text_crypto_list.setStyleSheet("color: red")
+                layout_col_3_main.addWidget(text_crypto_list)
+            layout_col_3_main.addWidget(Ui_spacer)
 
+        # GI Check
         gi_rs = gi()
         if len(gi_rs) > 0:
-            label_gi_title = QtWidgets.QLabel('GI Status:')
-            layout_Aov.addWidget(label_gi_title, y + 3, 0, 1, 1)
+            text_gi_title = QtWidgets.QLabel('GI Status:', self)
+            text_gi_title.setAlignment(QtCore.Qt.AlignTop)
+            text_gi_title.setFont(font_header)
+            layout_col_3_main.addWidget(text_gi_title)
+
             for g in gi_rs:
-                y = y + 1
-                label_gi_value = QtWidgets.QLabel(g)
-                label_gi_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-                layout_Aov.addWidget(label_gi_value, y + 2, 1, 1, 2)
-
-        cryptomatte = crypto()
-        if len(cryptomatte) > 0:
-            label_crypto_title = QtWidgets.QLabel('Crypto Status:')
-            layout_Aov.addWidget(label_crypto_title, y + 4, 0, 1, 1)
-            for c in cryptomatte:
-                y = y + 1
-                label_crypto_value = QtWidgets.QLabel(c)
-                label_crypto_value.setStyleSheet("color: red")
-                label_crypto_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-                layout_Aov.addWidget(label_crypto_value, y + 3, 1, 1, 2)
-
-        domelists = checklights()
-        if len(domelists) > 0:
-            label_dome_title = QtWidgets.QLabel('Domelight Status:')
-            layout_Aov.addWidget(label_dome_title, y + 5, 0, 1, 1)
-            for c in domelists:
-                y = y + 1
-                label_dome_value = QtWidgets.QLabel(c)
-                label_dome_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-                layout_Aov.addWidget(label_dome_value, y + 4, 1, 1, 2)
-
-        hipinfo = saveStatus()
-        if len(hipinfo) > 0:
-            label_hip_title = QtWidgets.QLabel('HIP Status:')
-            layout_Aov.addWidget(label_hip_title, y + 6, 0, 1, 1)
-            for h in hipinfo:
-                y = y + 1
-                label_hip_value = QtWidgets.QLabel(h)
-                if "File not saved" in h:
-                    label_hip_value.setStyleSheet("color: red")
-                    label_hip_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-                    layout_Aov.addWidget(label_hip_value, y + 5, 1, 1, 2)
+                text_gi_list = QtWidgets.QLabel('     ' + g)
+                if "GI Disabled" in g:
+                    text_gi_list.setStyleSheet('color : red')
+                    text_gi_list.setFont(font_error)
                 else:
-                    label_hip_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-                    layout_Aov.addWidget(label_hip_value, y + 5, 1, 1, 2)
+                    text_gi_list.setFont(font_body)
+                text_gi_list.setAlignment(QtCore.Qt.AlignTop)
+                layout_col_3_main.addWidget(text_gi_list)
+            layout_col_3_main.addWidget(Ui_spacer)
 
-        rsenv = rsEnv()
-        if len(rsenv) > 0:
-            label_env_title = QtWidgets.QLabel('RS ENV Status:')
-            layout_Aov.addWidget(label_env_title, y + 7, 0, 1, 1)
-            for r in rsenv:
-                y = y + 1
-                label_env_value = QtWidgets.QLabel(r)
-                label_env_value.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-                layout_Aov.addWidget(label_env_value, y + 6, 1, 1, 2)
+        # Z-Depth Check
+        z_depth = zDepth()
+        if len(z_depth) > 0:
+            text_z_title = QtWidgets.QLabel('Z-Depth Status:', self)
+            text_z_title.setAlignment(QtCore.Qt.AlignTop)
+            text_z_title.setFont(font_header)
+            layout_col_3_main.addWidget(text_z_title)
 
-        mainUi.addWidget(Ui_spacer)
-        # button = QtWidgets.QPushButton('Change Font', self)
-        # button.setFocusPolicy(QtCore.Qt.NoFocus)
-        # button.move(20, 20)
-        #
-        # mainUi.addWidget(button)
+            for z in z_depth:
+                text_z_list = QtWidgets.QLabel('     ' + z)
+                text_z_list.setAlignment(QtCore.Qt.AlignTop)
+                text_z_list.setStyleSheet('color : yellow')
+                text_z_list.setFont(font_body)
+                layout_col_3_main.addWidget(text_z_list)
+            layout_col_3_main.addWidget(Ui_spacer)
 
-        # self.connect(button, QtCore.SIGNAL('clicked()'), self.showDialog)
-        #
-        # self.label = QtWidgets.QLabel('This is some sample text', self)
-        # self.label.move(130, 20)
-        #
-        # mainUi.addWidget(self.label, 1)
-        self.setLayout(mainUi)
+        # Motion Check
+        motion = motionCheck()
+        if len(motion) > 0:
+            text_motion_title = QtWidgets.QLabel('Z-Depth Status:', self)
+            text_motion_title.setAlignment(QtCore.Qt.AlignTop)
+            text_motion_title.setFont(font_header)
+            layout_col_3_main.addWidget(text_motion_title)
+
+            for m in motion:
+                text_motion_list = QtWidgets.QLabel('     ' + m)
+                text_motion_list.setAlignment(QtCore.Qt.AlignTop)
+                if "Motion Blur and Vector enabled" in m:
+                    text_motion_list.setStyleSheet('color : red')
+                    text_motion_list.setFont(font_error)
+                else:
+                    text_motion_list.setFont(font_body)
+                layout_col_3_main.addWidget(text_motion_list)
+            layout_col_3_main.addWidget(Ui_spacer)
+
+        # RS ENV Check
+        rs_env = rsEnv()
+        if len(rs_env) > 0:
+            text_env_title = QtWidgets.QLabel('RS ENV Status:', self)
+            text_env_title.setAlignment(QtCore.Qt.AlignTop)
+            text_env_title.setFont(font_header)
+            layout_col_3_main.addWidget(text_env_title)
+
+            for rs in rs_env:
+                text_env_list = QtWidgets.QLabel('     ' + rs)
+                text_env_list.setAlignment(QtCore.Qt.AlignTop)
+                text_env_list.setFont(font_body)
+                layout_col_3_main.addWidget(text_env_list)
+            layout_col_3_main.addWidget(Ui_spacer)
+
+        self.setLayout(layout_window)
 
 
 setRopList()

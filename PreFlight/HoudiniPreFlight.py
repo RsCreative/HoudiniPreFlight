@@ -555,21 +555,21 @@ class HoudiniPreFlightUI(QtWidgets.QWidget):
                 layout_col_3_main.addWidget(text_gi_list)
             layout_col_3_main.addWidget(Ui_spacer)
 
-        # Z-Depth Check
-        z_depth = zDepth()
-        if len(z_depth) > 0:
-            text_z_title = QtWidgets.QLabel('Z-Depth Status:', self)
-            text_z_title.setAlignment(QtCore.Qt.AlignTop)
-            text_z_title.setFont(font_header)
-            layout_col_3_main.addWidget(text_z_title)
-
-            for z in z_depth:
-                text_z_list = QtWidgets.QLabel('     ' + z)
-                text_z_list.setAlignment(QtCore.Qt.AlignTop)
-                text_z_list.setStyleSheet('color : yellow')
-                text_z_list.setFont(font_body)
-                layout_col_3_main.addWidget(text_z_list)
-            layout_col_3_main.addWidget(Ui_spacer)
+        # # Z-Depth Check
+        # z_depth = zDepth()
+        # if len(z_depth) > 0:
+        #     text_z_title = QtWidgets.QLabel('Z-Depth Status:', self)
+        #     text_z_title.setAlignment(QtCore.Qt.AlignTop)
+        #     text_z_title.setFont(font_header)
+        #     layout_col_3_main.addWidget(text_z_title)
+        #
+        #     for z in z_depth:
+        #         text_z_list = QtWidgets.QLabel('     ' + z)
+        #         text_z_list.setAlignment(QtCore.Qt.AlignTop)
+        #         text_z_list.setStyleSheet('color : yellow')
+        #         text_z_list.setFont(font_body)
+        #         layout_col_3_main.addWidget(text_z_list)
+        #     layout_col_3_main.addWidget(Ui_spacer)
 
         # Motion Check
         motion = motionCheck()

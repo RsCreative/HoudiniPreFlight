@@ -613,4 +613,4 @@ try:
     window = HoudiniPreFlightUI()
     window.show()
 except:
-    hou.ui.displayMessage("Error: No Rops Found")
+    hou.ui.displayMessage("Error: No Camera or Rops Found")
